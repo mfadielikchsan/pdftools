@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Merge PDF Fadiel</title>
+
+  <!-- Bootstrap CSS CDN -->
+  <link href="mergepdf/bootstrap.css" rel="stylesheet">
+
+  <style>
+    body { background:#f1f3f5; }
+    header {
+      background: linear-gradient(135deg, #0d6efd, #0dcaf0);
+      color: white;
+      padding: 2rem 1rem;
+      margin-bottom: 2rem;
+      text-align: center;
+      border-radius: 0 0 1rem 1rem;
+    }
+    .card {
+      box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+      border: none;
+    }
+    .file-list li { transition: all 0.3s ease; }
+    .file-list li:hover { background-color: #f8f9fa; }
+    footer { margin-top: 3rem; text-align: center; color:#6c757d; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 class="fw-bold">Merge PDF</h1>
+    <p class="lead mb-0">Gabungkan beberapa file PDF langsung di browser Anda</p>
+  </header>
+
+  <main class="container">
+    <div class="card p-4 mb-4">
+      <div class="mb-3">
+        <label for="pdfFiles" class="form-label fw-semibold">Pilih file PDF</label>
+        <input class="form-control form-control-lg" type="file" id="pdfFiles" accept="application/pdf" multiple>
+        <div class="form-text">Anda bisa memilih lebih dari satu file.</div>
+      </div>
+
+      <div class="mb-3">
+        <h5 class="fw-semibold">Urutan file:</h5>
+        <ul id="fileList" class="list-group file-list"></ul>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2">
+        <button id="mergeBtn" class="btn btn-primary btn-lg" disabled>
+          Merge PDF
+        </button>
+        <button id="clearBtn" class="btn btn-outline-secondary btn-lg">
+          Clear
+        </button>
+        <div id="spinner" class="align-self-center d-none">
+          <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+          <span class="ms-2">Memproses...</span>
+        </div>
+      </div>
+
+      <div class="mt-4" id="outArea"></div>
+    </div>
+  </main>
+
+  <footer class="small">
+    Silahkan Dicoba :)
+  </footer>
+
+  <!-- pdf-lib CDN -->
+  <script src="mergepdf/pdf-lib.min.js"></script>
+  <!-- Bootstrap JS -->
+  <script src="mergepdf/bootstrap.bundle.min.js"></script> 
+
+  <script>
+    const pdfFilesInput = document.getElementById('pdfFiles');
+    const fileListEl = document.getElementById('fileList');
+    const mergeBtn = document.getElementById('mergeBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const outArea = document.getElementById('outArea');
+    const spinner = document.getElementById('spinner');
+
+    let files = [];
+
+    function renderFileList() {
+      fileListEl.innerHTML = '';
+      if (files.length === 0) {
+        fileListEl.innerHTML = '<li class="list-group-item text-muted">Belum ada file.</li>';
+        mergeBtn.disabled = true;
+        return;
+      }
+
+      files.forEach((f, idx) => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+        li.innerHTML = `
+          <div>
+            <strong>${escapeHtml(f.name)}</strong><br>
+            <span class="text-muted small">${formatBytes(f.size)}</span>
+          </div>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-secondary" onclick="moveUp(${idx})">↑</button>
+            <button class="btn btn-outline-secondary" onclick="moveDown(${idx})">↓</button>
+            <button class="btn btn-outline-danger" onclick="removeFile(${idx})">Hapus</button>
+          </div>
+        `;
+        fileListEl.appendChild(li);
+      });
+
+      mergeBtn.disabled = false;
+    }
+
+    function moveUp(i) { if (i > 0) { [files[i-1], files[i]] = [files[i], files[i-1]]; renderFileList(); } }
+    function moveDown(i) { if (i < files.length - 1) { [files[i+1], files[i]] = [files[i], files[i+1]]; renderFileList(); } }
+    function removeFile(i) { files.splice(i, 1); renderFileList(); }
+
+    pdfFilesInput.addEventListener('change', e => {
+      const selected = Array.from(e.target.files);
+      const pdfs = selected.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+      if (pdfs.length !== selected.length) alert('Hanya file PDF yang ditambahkan.');
+      files = files.concat(pdfs);
+      renderFileList();
+      pdfFilesInput.value = '';
+    });
+
+    clearBtn.addEventListener('click', () => {
+      files = [];
+      renderFileList();
+      outArea.innerHTML = '';
+    });
+
+    mergeBtn.addEventListener('click', async () => {
+      mergeBtn.disabled = true;
+      spinner.classList.remove('d-none');
+      outArea.innerHTML = '';
+
+      try {
+        const mergedPdf = await PDFLib.PDFDocument.create();
+        for (const file of files) {
+          const bytes = await file.arrayBuffer();
+          const pdf = await PDFLib.PDFDocument.load(bytes);
+          const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+          pages.forEach(p => mergedPdf.addPage(p));
+        }
+        const mergedBytes = await mergedPdf.save();
+        const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+
+        outArea.innerHTML = `
+          <a href="${url}" download="merged.pdf" class="btn btn-success btn-lg mb-3">
+            Download merged.pdf
+          </a>
+          <iframe src="${url}" style="width:100%; height:600px;" class="border rounded"></iframe>
+        `;
+      } catch (err) {
+        alert('Gagal merge PDF: ' + err.message);
+      } finally {
+        spinner.classList.add('d-none');
+        mergeBtn.disabled = false;
+      }
+    });
+
+    function formatBytes(bytes) {
+      const sizes = ['B','KB','MB','GB'];
+      if (bytes === 0) return '0 B';
+      const i = Math.floor(Math.log(bytes) / Math.log(1024));
+      return (bytes/Math.pow(1024,i)).toFixed(1)+' '+sizes[i];
+    }
+    function escapeHtml(text) {
+      return text.replace(/[&<>"']/g, m => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+      }[m]));
+    }
+
+    renderFileList();
+  </script>
+</body>
+</html>
