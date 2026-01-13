@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Dunlop | Auto Rename PDF Cortax</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- PDF.js -->
+<script src="cortax/pdf.min.js"></script>
+
+<!-- JSZip -->
+<script src="cortax/jszip.min.js"></script>
+
+<style>
+:root{
+    --yellow:#FFD200;
+    --black:#0B0B0B;
+    --dark:#141414;
+    --gray:#9CA3AF;
+    --border:#2A2A2A;
+}
+
+*{box-sizing:border-box}
+
+body{
+    margin:0;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background:
+        repeating-linear-gradient(
+            45deg,
+            #0b0b0b,
+            #0b0b0b 10px,
+            #101010 10px,
+            #101010 20px
+        );
+    color:white;
+}
+
+/* Layout */
+.wrapper{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+}
+
+.panel{
+    width:100%;
+    max-width:1000px;
+    background:linear-gradient(180deg,#111,#0b0b0b);
+    border:2px solid var(--border);
+    border-radius:20px;
+    padding:30px;
+    box-shadow:0 30px 60px rgba(0,0,0,.7);
+}
+
+/* Header */
+.header{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    margin-bottom:30px;
+    flex-wrap:wrap;
+}
+
+.logo{
+    width:60px;
+    height:60px;
+    background:var(--yellow);
+    color:black;
+    font-weight:900;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:26px;
+}
+
+.header-text h1{
+    margin:0;
+    font-size:26px;
+    letter-spacing:1px;
+}
+
+.header-text span{
+    color:var(--gray);
+    font-size:13px;
+}
+
+/* Drop zone */
+.drop-zone{
+    border:3px dashed var(--yellow);
+    border-radius:18px;
+    padding:50px 20px;
+    text-align:center;
+    font-weight:700;
+    letter-spacing:.5px;
+    color:var(--yellow);
+    cursor:pointer;
+    transition:.25s;
+}
+
+.drop-zone small{
+    display:block;
+    margin-top:8px;
+    color:#e5e7eb;
+    font-weight:400;
+}
+
+.drop-zone.dragover{
+    background:rgba(255,210,0,.08);
+    transform:scale(1.02);
+}
+
+input[type=file]{display:none}
+
+/* Button */
+.action{
+    margin-top:25px;
+    text-align:right;
+}
+
+button{
+    background:var(--yellow);
+    color:black;
+    border:none;
+    padding:14px 26px;
+    border-radius:14px;
+    font-weight:800;
+    letter-spacing:1px;
+    cursor:pointer;
+    transition:.25s;
+}
+
+button:hover{
+    background:#ffdf4d;
+}
+
+button:disabled{
+    background:#555;
+    color:#aaa;
+    cursor:not-allowed;
+}
+
+/* Log */
+.log{
+    margin-top:25px;
+    background:#050505;
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:18px;
+    height:260px;
+    overflow-y:auto;
+    font-family:Consolas, monospace;
+    font-size:13px;
+    color:#22c55e;
+    white-space:pre-wrap;
+}
+
+/* Responsive */
+@media(max-width:700px){
+    .panel{padding:20px}
+    .header{gap:12px}
+    .logo{width:52px;height:52px;font-size:22px}
+    .header-text h1{font-size:22px}
+    .drop-zone{padding:35px 15px}
+    button{width:100%}
+    .action{text-align:center}
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+<div class="panel">
+
+    <div class="header">
+        <div class="logo">D</div>
+        <div class="header-text">
+            <h1>AUTO RENAME PDF CORTAX</h1>
+            <span>DUNLOP INTERNAL PDF TOOL</span>
+        </div>
+    </div>
+
+    <label class="drop-zone" id="dropZone">
+        DRAG & DROP FILE PDF DI SINI
+        <small>atau klik untuk memilih beberapa PDF</small>
+        <input type="file" id="fileInput" accept="application/pdf" multiple>
+    </label>
+
+    <div class="action">
+        <button id="processBtn" disabled>PROSES & DOWNLOAD ZIP</button>
+    </div>
+
+    <div class="log" id="log"></div>
+
+</div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+"cortax/pdf.worker.min.js";
+
+const input=document.getElementById("fileInput");
+const dropZone=document.getElementById("dropZone");
+const processBtn=document.getElementById("processBtn");
+const logBox=document.getElementById("log");
+
+let files=[];
+
+function log(m){
+    logBox.textContent+=m+"\n";
+    logBox.scrollTop=logBox.scrollHeight;
+}
+
+dropZone.addEventListener("dragover",e=>{
+    e.preventDefault();
+    dropZone.classList.add("dragover");
+});
+dropZone.addEventListener("dragleave",()=>dropZone.classList.remove("dragover"));
+dropZone.addEventListener("drop",e=>{
+    e.preventDefault();
+    dropZone.classList.remove("dragover");
+    addFiles(e.dataTransfer.files);
+});
+input.addEventListener("change",()=>addFiles(input.files));
+
+function addFiles(list){
+    for(const f of list){
+        if(f.type==="application/pdf"){
+            files.push(f);
+            log("ADD : "+f.name);
+        }
+    }
+    if(files.length>0)processBtn.disabled=false;
+}
+
+processBtn.addEventListener("click",async()=>{
+    processBtn.disabled=true;
+    log("\n=== START ===");
+    const zip=new JSZip();
+
+    for(const file of files){
+        try{
+            const nomor=file.name.replace(/\.pdf$/i,"").split("_").at(-1);
+            const text=await extractText(file);
+            const match=text.match(/A\.2\s+NAMA\s*:\s*([A-Z0-9 .,&()\-]{3,100}?)(?=\s+A\.3)/i);
+            if(!match){log("SKIP : "+file.name);continue;}
+
+            const nama=match[1].trim()
+                .replace(/[\\/:*?"<>|]/g,"")
+                .replace(/\s+/g," ");
+
+            const newName=`${nomor}_${nama}.pdf`;
+            zip.file(newName,file);
+            log("OK  : "+newName);
+        }catch(e){
+            log("ERR : "+file.name+" → "+e.message);
+        }
+    }
+
+    log("\nCREATING ZIP...");
+    const blob=await zip.generateAsync({type:"blob"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="DUNLOP_RENAME_CORTAX.zip";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    log("DONE");
+});
+
+async function extractText(file){
+    const data=new Uint8Array(await file.arrayBuffer());
+    const pdf=await pdfjsLib.getDocument({data}).promise;
+    let text="";
+    for(let i=1;i<=pdf.numPages;i++){
+        const page=await pdf.getPage(i);
+        const c=await page.getTextContent();
+        text+=c.items.map(i=>i.str).join(" ")+"\n";
+    }
+    return text;
+}
+</script>
+
+</body>
+</html>

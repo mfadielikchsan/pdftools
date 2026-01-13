@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Dunlop PDF Tools</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- ===== CSS ===== -->
+    <style>
+        :root {
+            --dunlop-yellow: #FFD200;
+            --dunlop-black: #111111;
+            --dunlop-dark: #1c1c1c;
+            --dunlop-gray: #2a2a2a;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #000000, #1a1a1a);
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 42px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: var(--dunlop-yellow);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: #cccccc;
+            margin-bottom: 50px;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .menu-card {
+            background: var(--dunlop-dark);
+            border: 2px solid var(--dunlop-gray);
+            border-radius: 14px;
+            padding: 30px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                120deg,
+                transparent,
+                rgba(255, 210, 0, 0.25),
+                transparent
+            );
+            transition: all 0.5s;
+        }
+
+        .menu-card:hover::before {
+            left: 100%;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--dunlop-yellow);
+            box-shadow: 0 10px 30px rgba(255, 210, 0, 0.25);
+        }
+
+        .menu-icon {
+            font-size: 52px;
+            margin-bottom: 20px;
+        }
+
+        .menu-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--dunlop-yellow);
+            margin-bottom: 10px;
+        }
+
+        .menu-desc {
+            font-size: 14px;
+            color: #dddddd;
+            line-height: 1.5;
+        }
+
+        footer {
+            margin-top: 50px;
+            font-size: 13px;
+            color: #aaaaaa;
+        }
+
+        footer span {
+            color: var(--dunlop-yellow);
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="logo">DUNLOP PDF TOOLS</div>
+        <div class="subtitle">
+            Professional PDF Utilities & Cortax Automation
+        </div>
+
+        <div class="menu-grid">
+            <div class="menu-card" onclick="goTo('merge.html')">
+                <div class="menu-icon">📄➕</div>
+                <div class="menu-title">Merge PDF</div>
+                <div class="menu-desc">
+                    Gabungkan beberapa file PDF menjadi satu dokumen dengan cepat dan rapi.
+                </div>
+            </div>
+
+            <div class="menu-card" onclick="goTo('split.html')">
+                <div class="menu-icon">✂️📄</div>
+                <div class="menu-title">Split PDF</div>
+                <div class="menu-desc">
+                    Pisahkan halaman PDF sesuai kebutuhan Anda secara otomatis.
+                </div>
+            </div>
+
+            <div class="menu-card" onclick="goTo('rename.html')">
+                <div class="menu-icon">🔄🧾</div>
+                <div class="menu-title">Auto Rename Cortax</div>
+                <div class="menu-desc">
+                    Rename file Cortax secara otomatis, konsisten, dan bebas error.
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            © 2026 <span>Dunlop Tools</span> • Internal Utility System
+        </footer>
+    </div>
+
+    <!-- ===== JS ===== -->
+    <script>
+        function goTo(page) {
+            window.location.href = page;
+        }
+    </script>
+
+</body>
+</html>
