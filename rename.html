@@ -237,35 +237,41 @@ function addFiles(list){
     if(files.length>0)processBtn.disabled=false;
 }
 
-processBtn.addEventListener("click",async()=>{
-    processBtn.disabled=true;
+processBtn.addEventListener("click", async () => {
+    processBtn.disabled = true;
     log("\n=== START ===");
-    const zip=new JSZip();
+    const zip = new JSZip();
 
-    for(const file of files){
-        try{
-            const nomor=file.name.replace(/\.pdf$/i,"").split("_").at(-1);
-            const text=await extractText(file);
-            const match=text.match(/A\.2\s+NAMA\s*:\s*([A-Z0-9 .,&()\-]{3,100}?)(?=\s+A\.3)/i);
-            if(!match){log("SKIP : "+file.name);continue;}
+    for (const file of files) {
+        try {
+            const nomor = file.name.replace(/\.pdf$/i, "").split("_").at(-1);
+            const text = await extractText(file);
 
-            const nama=match[1].trim()
-                .replace(/[\\/:*?"<>|]/g,"")
-                .replace(/\s+/g," ");
+            // Regex untuk NAMA / NAME / nama / name / NaMe / dll (case-insensitive)
+            const match = text.match(/A\.2\s+(NAMA|NAME)\s*:\s*([A-Z0-9 .,&()\-]{3,100}?)(?=\s+A\.3)/i);
 
-            const newName=`${nomor}_${nama}.pdf`;
-            zip.file(newName,file);
-            log("OK  : "+newName);
-        }catch(e){
-            log("ERR : "+file.name+" → "+e.message);
+            if (!match) {
+                log("SKIP : " + file.name);
+                continue;
+            }
+
+            const nama = match[2].trim()
+                .replace(/[\\/:*?"<>|]/g, "")
+                .replace(/\s+/g, " ");
+
+            const newName = `${nomor}_${nama}.pdf`;
+            zip.file(newName, file);
+            log("OK  : " + newName + "  (field: " + match[1] + ")");
+        } catch (e) {
+            log("ERR : " + file.name + " → " + e.message);
         }
     }
 
     log("\nCREATING ZIP...");
-    const blob=await zip.generateAsync({type:"blob"});
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);
-    a.download="DUNLOP_RENAME_CORTAX.zip";
+    const blob = await zip.generateAsync({ type: "blob" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "DUNLOP_RENAME_CORTAX.zip";
     a.click();
     URL.revokeObjectURL(a.href);
     log("DONE");
@@ -286,3 +292,4 @@ async function extractText(file){
 
 </body>
 </html>
+
