@@ -237,6 +237,37 @@ function addFiles(list){
     if(files.length>0)processBtn.disabled=false;
 }
 
+function sanitize(str){
+    return str
+        .trim()
+        .replace(/[\\/:*?"<>|]/g, "")
+        .replace(/\s+/g, " ");
+}
+
+// Coba proses sebagai Faktur Pajak.
+// Return object {nama, npwp, nomorFaktur} jika semua field ketemu, else null.
+function tryFakturPajak(text){
+    if(!/faktur\s*pajak/i.test(text)) return null;
+
+    const nomorMatch = text.match(
+        /Kode\s+dan\s+Nomor\s+Seri\s+Faktur\s+Pajak\s*:?\s*([0-9.\-]{5,40})/i
+    );
+    const namaMatch = text.match(
+        /Nama\s*:\s*([A-Z0-9 .,&()\-\/]{3,100}?)(?=\s+(Alamat|NPWP|A\.\d|B\.\d|$))/i
+    );
+    const npwpMatch = text.match(
+        /NPWP\s*:\s*([0-9.\-]{5,40})/i
+    );
+
+    if(!nomorMatch || !namaMatch || !npwpMatch) return null;
+
+    return {
+        nama: sanitize(namaMatch[1]),
+        npwp: sanitize(npwpMatch[1]),
+        nomorFaktur: sanitize(nomorMatch[1])
+    };
+}
+
 processBtn.addEventListener("click", async () => {
     processBtn.disabled = true;
     log("\n=== START ===");
@@ -244,24 +275,31 @@ processBtn.addEventListener("click", async () => {
 
     for (const file of files) {
         try {
-            const nomor = file.name.replace(/\.pdf$/i, "").split("_").at(-1);
             const text = await extractText(file);
 
-            // Regex untuk NAMA / NAME / nama / name / NaMe / dll (case-insensitive)
-            const match = text.match(/A\.2\s+(NAMA|NAME)\s*:\s*([A-Z0-9 .,&()\-]{3,100}?)(?=\s+A\.3)/i);
+            // 1) Cek dulu apakah dokumen ini Faktur Pajak
+            const faktur = tryFakturPajak(text);
 
-            if (!match) {
-                log("SKIP : " + file.name);
+            if (faktur) {
+                const newName = `${faktur.nama}-${faktur.npwp}-${faktur.nomorFaktur}.pdf`;
+                zip.file(newName, file);
+                log("OK  : " + newName + "  (mode: FAKTUR PAJAK)");
                 continue;
             }
 
-            const nama = match[2].trim()
-                .replace(/[\\/:*?"<>|]/g, "")
-                .replace(/\s+/g, " ");
+            // 2) Kalau bukan Faktur Pajak, pakai regex lama (A.2 NAMA)
+            const nomor = file.name.replace(/\.pdf$/i, "").split("_").at(-1);
+            const match = text.match(/A\.2\s+(NAMA|NAME)\s*:\s*([A-Z0-9 .,&()\-]{3,100}?)(?=\s+A\.3)/i);
 
+            if (!match) {
+                log("SKIP : " + file.name + "  (tidak ada match di kedua mode)");
+                continue;
+            }
+
+            const nama = sanitize(match[2]);
             const newName = `${nomor}_${nama}.pdf`;
             zip.file(newName, file);
-            log("OK  : " + newName + "  (field: " + match[1] + ")");
+            log("OK  : " + newName + "  (mode: BUPOT)");
         } catch (e) {
             log("ERR : " + file.name + " → " + e.message);
         }
@@ -292,4 +330,3 @@ async function extractText(file){
 
 </body>
 </html>
-
